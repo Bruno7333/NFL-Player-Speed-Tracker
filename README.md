@@ -68,6 +68,8 @@ Any format OpenCV can read: `.mp4`, `.mkv`, `.webm`, `.avi`, etc.
 ### Camera angle requirement
 **Only use clips filmed from a standard broadcast sideline camera angle** — the wide shot where you can see the full width of the field and multiple yard lines in perspective. The homography math relies on being able to detect at least 2 yard lines and 1 sideline.
 
+![Example of a valid camera angle](https://static.www.nfl.com/image/upload/t_editorial_landscape_mobile/f_auto/league/wlqagcngd21zxmwv6ur4.jpg)
+
 Clips that will **not** work well:
 - End zone / red zone overhead cameras
 - Close-up player cameras
