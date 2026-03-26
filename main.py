@@ -26,7 +26,7 @@ from field_calibration import (
 # ─────────────────────────────────────────────
 # Constants — white mask
 # ─────────────────────────────────────────────
-lower_white = np.array([50, 0, 140])
+lower_white = np.array([0, 0, 130])
 upper_white = np.array([180, 80, 255])
 #WHITE_PROXIMITY_PX = 1  # keep pixels within this many pixels of white
                         # Used to dilate right before input into canny filter
@@ -58,20 +58,20 @@ RHO_THRESHOLD   = 50               # max rho difference between lines in a group
 # ─────────────────────────────────────────────
 # Constants — video source
 # ─────────────────────────────────────────────
-VIDEO_PATH = 'Images/TyreekHill.mkv'   # set to the name and location of your desired video input
+VIDEO_PATH = 'Images/NFL05.webm'   # set to the name and location of your desired video input
 
 # ─────────────────────────────────────────────
 # Constants — heatmap throttle
 # ─────────────────────────────────────────────
 HEATMAP_UPDATE_INTERVAL = 1    # redraw the heatmap debug window every N frames
-CROP_BOTTOM = 0              # pixels to mask from the bottom before detection (scoreboard)
+CROP_BOTTOM = 110              # pixels to mask from the bottom before detection (scoreboard)
 
 # ─────────────────────────────────────────────
 # Mode switch
 # ─────────────────────────────────────────────
 # True  → testing mode:     tab20 colours, heatmap, Canny edges, white mask windows all shown
 # False → production mode:  yard lines = red, sidelines = blue; debug windows hidden
-TESTING_MODE = False
+TESTING_MODE = True
 
 # ─────────────────────────────────────────────
 # Constants — Phase 2 player detection / tracking

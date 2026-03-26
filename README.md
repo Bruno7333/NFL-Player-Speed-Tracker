@@ -66,7 +66,9 @@ On first run, `ultralytics` will automatically download `yolov8m.pt` (~50 MB) if
 Any format OpenCV can read: `.mp4`, `.mkv`, `.webm`, `.avi`, etc.
 
 ### Camera angle requirement
-**Only use clips filmed from a standard broadcast sideline camera angle** — the wide shot where you can see the full width of the field and multiple yard lines in perspective. The homography math relies on being able to detect at least 2 yard lines and 1 sideline.
+**Only use clips filmed from a standard broadcast sideline camera angle** - the wide shot where you can see the full width of the field and multiple yard lines in perspective. The homography math relies on being able to detect at least 2 yard lines and 1 sideline.
+
+An example of a camera angle from a clip that will work well with this pipeline is shown below:
 
 ![Example of a valid camera angle](https://static.www.nfl.com/image/upload/t_editorial_landscape_mobile/f_auto/league/wlqagcngd21zxmwv6ur4.jpg)
 
@@ -133,7 +135,7 @@ All tunable constants live at the top of `main.py`.
 ### TESTING_MODE
 
 ```python
-TESTING_MODE = True   # default
+TESTING_MODE = True   # normally used for debugging
 ```
 
 When `True`, the viewer opens three extra debug windows:
@@ -171,3 +173,38 @@ field_calibration.py  Phase 1: line detection, homography, minimap utilities
 player_tracking.py    Phase 2: foot-point extraction utility
 Images/               Put your video clips here
 ```
+
+## Current Issues
+
+### 1. Configuring Values for the White Mask
+
+The pipeline isolates field lines by filtering for white pixels in HSV color space using `lower_white` and `upper_white` bounds defined in [field_calibration.py](field_calibration.py). The defaults work well for many standard broadcast clips, but the apparent color of yard lines varies significantly depending on the video source:
+
+- **Lighting conditions** — overcast games make lines appear cooler/grayer; bright sun bleaches them toward pure white
+- **Broadcast encoding** — different networks and streaming platforms apply different color grading and compression, shifting hue and saturation
+- **Camera exposure** — a slightly overexposed shot pushes lines toward pure white (low saturation); an underexposed shot makes them appear off-white or even yellowish
+- **Stadium turf color** — some fields use a darker green that increases contrast; others are more yellow-green, which can bleed into the white mask. An issue I have noticed is that in clips where the field is brown due to dead grass, the standard bounds will catch the color of mud along with the yard lines, making the output unusable.
+
+If the pipeline is failing to detect lines (or detecting too many false positives), the first thing to tune is the HSV bounds. In [field_calibration.py](field_calibration.py), find:
+
+```python
+lower_white = np.array([0, 0, 200])
+upper_white = np.array([180, 40, 255])
+```
+
+The three values are **[Hue, Saturation, Value]**:
+
+| Channel | What it controls | Tuning direction |
+|---------|-----------------|-----------------|
+| `Value` (lower bound, index 2) | Minimum brightness to count as white | Raise it (e.g. `180`) to reject gray/shadowed areas; lower it (e.g. `130`) to catch dimmer lines |
+| `Saturation` (upper bound, index 1) | Maximum color tint allowed | Lower it (e.g. `25`) to reject slightly-colored pixels; raise it (e.g. `60`) if lines appear off-white or yellowish |
+| `Hue` | Generally leave at `[0, 180]` (full range) | Only narrow this if a specific non-white color is flooding the mask |
+
+**Workflow for tuning:**
+
+1. Set `TESTING_MODE = True` in [main.py](main.py) and run the pipeline
+2. Watch the **NFL B&W** debug window — it shows exactly which pixels pass the white mask
+3. Yard lines should appear as clean white bands; the green field and players should be mostly black
+4. If lines are missing → lower the `Value` lower bound or raise the `Saturation` upper bound
+5. If the scoreboard bar, jersey numbers, or crowd pixels are bleeding in → raise the `Value` lower bound or lower the `Saturation` upper bound
+6. Cross-check the **Rho/Theta Heatmap** — yard lines should form tight clusters near theta ≈ 0°. As yard lines are nearly parallel and tend towards one vanishing point, they tend to show up on a line across the **Heatmap**. On the other hand noise usually shows up as scattered points
