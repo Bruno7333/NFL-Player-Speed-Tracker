@@ -74,7 +74,7 @@ def pixel_to_field(px, py, H):
 
 ---
 
-## Phase 2 — Single-Player Detection & Tracking
+## Phase 2 — Single-Player Detection & Tracking ✅ COMPLETE
 
 **Goal:** Let the user click on one player; detect and track that player across frames using
 YOLO + ByteTrack. Display their bounding box, foot point, and field position on the overlay.
@@ -230,7 +230,7 @@ Per frame, with a player selected:
 
 ---
 
-## Phase 3 — Speed Calculation
+## Phase 3 — Speed Calculation ✅ COMPLETE
 
 **Goal:** Convert frame-to-frame field coordinate deltas into mph / yards per second.
 
@@ -444,8 +444,8 @@ services:
 
 ```
 Week 1   Phase 1    COMPLETE — homography + field calibration on imageTestHL.py
-Week 2   Phase 2    YOLO single-player selection + ByteTrack ID persistence
-Week 3   Phase 3    Speed numbers validated against known play footage
+Week 2   Phase 2    COMPLETE — YOLO + ByteTrack, click selection, field coords, minimap dot
+Week 3   Phase 3    COMPLETE — speed calculation, smoothing, overlay in main.py
 Week 4   Phase 4    FastAPI backend with /upload + /stream + /select endpoints
 Week 5   Phase 5    React frontend with video overlay + speed panel
 Week 6   Phase 6    Dockerized and deployed to Railway or Render

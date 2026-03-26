@@ -58,7 +58,7 @@ RHO_THRESHOLD   = 50               # max rho difference between lines in a group
 # ─────────────────────────────────────────────
 # Constants — video source
 # ─────────────────────────────────────────────
-VIDEO_PATH = 'Images/TyreekHill.mkv'   # set to 0 for default webcam
+VIDEO_PATH = 'Images/TyreekHill.mkv'   # set to the name and location of your desired video input
 
 # ─────────────────────────────────────────────
 # Constants — heatmap throttle
@@ -71,7 +71,7 @@ CROP_BOTTOM = 0              # pixels to mask from the bottom before detection (
 # ─────────────────────────────────────────────
 # True  → testing mode:     tab20 colours, heatmap, Canny edges, white mask windows all shown
 # False → production mode:  yard lines = red, sidelines = blue; debug windows hidden
-TESTING_MODE = True
+TESTING_MODE = False
 
 # ─────────────────────────────────────────────
 # Constants — Phase 2 player detection / tracking

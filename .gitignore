@@ -4,5 +4,6 @@ __pycache__
 *.pyc
 Plans
 yolov8m.pt
+Server_InTesting
 venv/
 .venv/
