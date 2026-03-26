@@ -1,0 +1,8 @@
+Images
+Old
+__pycache__
+*.pyc
+Plans
+yolov8m.pt
+venv/
+.venv/
