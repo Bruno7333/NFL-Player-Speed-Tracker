@@ -35,7 +35,7 @@ upper_white = np.array([180, 80, 255])
 # Constants — green (field) mask
 # ─────────────────────────────────────────────
 lower_green = np.array([30, 30, 30])
-upper_green = np.array([95, 255, 255])
+upper_green = np.array([75, 255, 255])
 GREEN_PROXIMITY_PX = 10   # keep white pixels within this many pixels of green
 
 # ─────────────────────────────────────────────
@@ -47,7 +47,7 @@ CANNY_THRESH2 = 175   # upper hysteresis threshold
 # ─────────────────────────────────────────────
 # Constants — Hough Lines
 # ─────────────────────────────────────────────
-HOUGH_THRESHOLD = 125  # minimum votes for a line to be accepted
+HOUGH_THRESHOLD = 110  # minimum votes for a line to be accepted
 
 # ─────────────────────────────────────────────
 # Constants — line grouping (rho/theta space)
@@ -59,6 +59,7 @@ RHO_THRESHOLD   = 50               # max rho difference between lines in a group
 # Constants — video source
 # ─────────────────────────────────────────────
 VIDEO_PATH = 'Images/NFL05.webm'   # set to the name and location of your desired video input
+OUTPUT_PATH = 'Images/Output.mp4'
 
 # ─────────────────────────────────────────────
 # Constants — heatmap throttle
@@ -69,9 +70,12 @@ CROP_BOTTOM = 110              # pixels to mask from the bottom before detection
 # ─────────────────────────────────────────────
 # Mode switch
 # ─────────────────────────────────────────────
+TESTING_MODE = False
 # True  → testing mode:     tab20 colours, heatmap, Canny edges, white mask windows all shown
 # False → production mode:  yard lines = red, sidelines = blue; debug windows hidden
-TESTING_MODE = True
+VIDEO_OUTPUT_MODE = True
+# True → video output:      The video will be saved to OUTPUT_PATH
+# False → no video output:  No video will be saved
 
 # ─────────────────────────────────────────────
 # Constants — Phase 2 player detection / tracking
@@ -89,12 +93,11 @@ YL_FIT_THRESHOLD = 150   # max vertical rho residual (pixels) to be an inlier
 # ─────────────────────────────────────────────
 # Constants — Phase 3 speed calculation
 # ─────────────────────────────────────────────
-SPEED_WINDOW_FRAMES = 5
-SPEED_HISTORY_LEN   = 10
 SPEED_SMOOTH_LEN    = 5
 SPEED_MAX_MPH       = 25.0
-SPEED_MIN_YARDS     = 0.1
+SPEED_MIN_YARDS     = 0.05  # minimum yards per frame to register movement (per-frame threshold)
 YDS_PER_S_TO_MPH    = 2.04545
+MAX_YARDS_PER_FRAME = 2.5   # reject single-frame jumps above this (noise/homography glitch)
 
 
 # ═════════════════════════════════════════════
@@ -111,12 +114,13 @@ cap = cv.VideoCapture(VIDEO_PATH)
 if not cap.isOpened():
     raise IOError(f"Could not open video source: {VIDEO_PATH}")
 
-frame_index = 0
+frame_index = 120
 total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 paused = True   # start paused; press Space to play
 prev_avg_yl_theta = None   # rolling average theta for yard lines (radians, normalised)
 YL_TEMPORAL_THRESHOLD  = np.deg2rad(30)   # max deviation from prev-frame average
-SL_RHO_THRESHOLD       = 40              # max frame-to-frame sideline rho shift (px)
+SL_RHO_THRESHOLD       = 1000              # max frame-to-frame sideline rho shift (px)
+FRAME_SL_RHO_THRESHOLD = 20
 SL_THETA_THRESHOLD     = np.deg2rad(8)  # max frame-to-frame sideline angle shift
 prev_sl_rho    = None   # sideline rho from previous frame
 prev_sl_theta  = None   # sideline theta from previous frame
@@ -130,7 +134,9 @@ lost_counter  = 0
 click_pending = None
 
 video_fps         = cap.get(cv.CAP_PROP_FPS) or 29.97
-pos_history       = deque(maxlen=SPEED_HISTORY_LEN)
+out               = cv.VideoWriter(OUTPUT_PATH, cv.VideoWriter_fourcc(*'mp4v'),
+                                   video_fps, (1280, 720)) if VIDEO_OUTPUT_MODE else None
+prev_field_pos    = None
 speed_history     = deque(maxlen=SPEED_SMOOTH_LEN)
 current_speed_mph = 0.0
 prev_selected_id  = None
@@ -295,8 +301,17 @@ while cap.isOpened():
 
     # ── Phase 1.2 — Homography (hybrid: one sideline + VP) ───────────────
     H = None
-    primary_sl  = max(sideline_groups, key=lambda g: len(g['rho_theta'])) \
-                  if sideline_groups else None
+    if sideline_groups:
+        if prev_sl_rho is not None:
+            best = min(sideline_groups, key=lambda g: abs(g['rho'] - prev_sl_rho))
+            if abs(best['rho'] - prev_sl_rho) <= FRAME_SL_RHO_THRESHOLD:
+                primary_sl = best
+            else:
+                primary_sl = max(sideline_groups, key=lambda g: len(g['rho_theta']))
+        else:
+            primary_sl = max(sideline_groups, key=lambda g: len(g['rho_theta']))
+    else:
+        primary_sl = None
 
     # ── Sideline temporal filter — reject implausible frame-to-frame jumps ─
     if primary_sl is not None and prev_sl_rho is not None:
@@ -354,7 +369,7 @@ while cap.isOpened():
             fx = pixel_to_field(px_mid, py_mid, H)[0] + 5
             yard_lines_field_x.append(fx)
         n_yl = max(len(yard_lines_field_x), 1)
-        field_length_visible = (n_yl - 1) * 5 + 10
+        field_length_visible = (n_yl) * 5
         draw_minimap(frame, yard_lines_field_x, field_length_visible)
     else:
         draw_minimap(frame, [])
@@ -392,7 +407,7 @@ while cap.isOpened():
         lost_counter = 0
 
         if selected_id != prev_selected_id:
-            pos_history.clear()
+            prev_field_pos    = None
             speed_history.clear()
             current_speed_mph = 0.0
         prev_selected_id = selected_id
@@ -406,8 +421,11 @@ while cap.isOpened():
         else:
             lost_counter += 1
             if lost_counter > MAX_LOST_FRAMES:
-                selected_id  = None
-                lost_counter = 0
+                selected_id    = None
+                lost_counter   = 0
+                prev_field_pos = None
+                speed_history.clear()
+                current_speed_mph = 0.0
 
     # ── Map selected player foot → field coords ───────────────────────────
     player_field_pos = None
@@ -423,24 +441,22 @@ while cap.isOpened():
                 player_foot_px   = fx_px
                 break
 
-    # ── Phase 3 — position history + speed calculation ───────────────────
+    # ── Phase 3 — per-frame delta speed calculation ──────────────────────
     if player_field_pos is not None and selected_id is not None \
             and selected_id in current_ids:
-        pos_history.append(player_field_pos)
-
-    if len(pos_history) >= SPEED_WINDOW_FRAMES:
-        x0, y0 = pos_history[-SPEED_WINDOW_FRAMES]
-        x1, y1 = pos_history[-1]
-        distance_yards = ((x1 - x0) ** 2 + (y1 - y0) ** 2) ** 0.5
-        time_seconds   = SPEED_WINDOW_FRAMES / video_fps
-        if distance_yards < SPEED_MIN_YARDS:
-            speed_mph = 0.0
-        else:
-            speed_mph = (distance_yards / time_seconds) * YDS_PER_S_TO_MPH
-        if speed_mph <= SPEED_MAX_MPH:
-            speed_history.append(speed_mph)
-        if speed_history:
-            current_speed_mph = float(np.median(speed_history))
+        if prev_field_pos is not None:
+            frame_dist = ((player_field_pos[0] - prev_field_pos[0]) ** 2
+                          + (player_field_pos[1] - prev_field_pos[1]) ** 2) ** 0.5
+            if frame_dist <= MAX_YARDS_PER_FRAME:
+                if frame_dist < SPEED_MIN_YARDS:
+                    speed_mph = 0.0
+                else:
+                    speed_mph = (frame_dist * video_fps) * YDS_PER_S_TO_MPH
+                if speed_mph <= SPEED_MAX_MPH:
+                    speed_history.append(speed_mph)
+                if speed_history:
+                    current_speed_mph = float(np.median(speed_history))
+        prev_field_pos = player_field_pos
 
     # ── Draw all players (grey foot dots) ────────────────────────────────
     for (x1, y1, x2, y2), tid in boxes:
@@ -507,6 +523,8 @@ while cap.isOpened():
 
     # ── Display ───────────────────────────────────────────────────────────
     cv.imshow('NFL Live (HoughLines)', frame)
+    if VIDEO_OUTPUT_MODE and out is not None:
+        out.write(frame)
     if TESTING_MODE:
         cv.imshow('NFL Edges', edges)
         cv.imshow('NFL B&W', white_gray)
@@ -521,6 +539,8 @@ while cap.isOpened():
             key = cv.waitKey(0) & 0xFF
             if key == ord('d'):
                 cap.release()
+                if out is not None:
+                    out.release()
                 cv.destroyAllWindows()
                 exit()
             elif key == ord(' '):
@@ -537,15 +557,17 @@ while cap.isOpened():
                         tracker.reset()
                 break
             elif key == ord('c'):
-                selected_id  = None
-                lost_counter = 0
-                pos_history.clear()
+                selected_id    = None
+                lost_counter   = 0
+                prev_field_pos = None
                 speed_history.clear()
                 current_speed_mph = 0.0
     else:
         key = cv.waitKey(1) & 0xFF
         if key == ord('d'):
             cap.release()
+            if out is not None:
+                out.release()
             cv.destroyAllWindows()
             exit()
         elif key == ord(' '):
@@ -564,4 +586,6 @@ while cap.isOpened():
 
 
 cap.release()
+if out is not None:
+    out.release()
 cv.destroyAllWindows()

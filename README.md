@@ -132,6 +132,26 @@ python main.py
 
 All tunable constants live at the top of `main.py`.
 
+### VIDEO_OUTPUT_MODE
+
+```python
+VIDEO_OUTPUT_MODE = True
+```
+
+When `True`, every frame displayed is written to the file specified by `OUTPUT_PATH`:
+
+```python
+OUTPUT_PATH = 'Images/Output.mp4'
+```
+
+The output is encoded as MP4 (MPEG-4) at the same frame rate as the source video and at 1280×720 resolution. All overlays — yard line labels, sidelines, bounding box, speed readout, and minimap — are baked into the output file exactly as they appear on screen.
+
+Set `VIDEO_OUTPUT_MODE = False` to skip saving (useful while tuning constants, since writing to disk adds a small overhead).
+
+> **Note:** Always exit via the `d` key rather than closing the window directly. Closing the window without pressing `d` will skip the final `out.release()` call and leave the output file corrupt.
+
+---
+
 ### TESTING_MODE
 
 ```python
