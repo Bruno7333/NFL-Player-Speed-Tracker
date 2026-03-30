@@ -97,7 +97,7 @@ yt-dlp -f "bestvideo[ext=mp4]" "YOUR_URL_HERE" -o "Images/clip.mp4"
 
 Trim to a specific time range (requires `ffmpeg`):
 ```bash
-yt-dlp --download-sections "*0:10-0:40" "YOUR_URL_HERE" -o "Images/clip.mp4"
+yt-dlp --download-sections "*0:00:10-0:00:40" "YOUR_URL_HERE" -o "Images/clip.mp4"
 ```
 
 Once downloaded, update `VIDEO_PATH` in `main.py`:

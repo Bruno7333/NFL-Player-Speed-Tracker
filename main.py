@@ -58,7 +58,7 @@ RHO_THRESHOLD   = 50               # max rho difference between lines in a group
 # ─────────────────────────────────────────────
 # Constants — video source
 # ─────────────────────────────────────────────
-VIDEO_PATH = 'Images/NFL05.webm'   # set to the name and location of your desired video input
+VIDEO_PATH = 'Images/NFL06.webm'   # set to the name and location of your desired video input
 OUTPUT_PATH = 'Images/Output.mp4'
 
 # ─────────────────────────────────────────────
@@ -73,7 +73,7 @@ CROP_BOTTOM = 110              # pixels to mask from the bottom before detection
 TESTING_MODE = False
 # True  → testing mode:     tab20 colours, heatmap, Canny edges, white mask windows all shown
 # False → production mode:  yard lines = red, sidelines = blue; debug windows hidden
-VIDEO_OUTPUT_MODE = True
+VIDEO_OUTPUT_MODE = False
 # True → video output:      The video will be saved to OUTPUT_PATH
 # False → no video output:  No video will be saved
 
@@ -97,7 +97,7 @@ SPEED_SMOOTH_LEN    = 5
 SPEED_MAX_MPH       = 25.0
 SPEED_MIN_YARDS     = 0.05  # minimum yards per frame to register movement (per-frame threshold)
 YDS_PER_S_TO_MPH    = 2.04545
-MAX_YARDS_PER_FRAME = 2.5   # reject single-frame jumps above this (noise/homography glitch)
+MAX_YARDS_PER_FRAME = 1   # reject single-frame jumps above this (noise/homography glitch)
 
 
 # ═════════════════════════════════════════════
@@ -114,7 +114,7 @@ cap = cv.VideoCapture(VIDEO_PATH)
 if not cap.isOpened():
     raise IOError(f"Could not open video source: {VIDEO_PATH}")
 
-frame_index = 120
+frame_index = 0
 total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 paused = True   # start paused; press Space to play
 prev_avg_yl_theta = None   # rolling average theta for yard lines (radians, normalised)
@@ -575,7 +575,6 @@ while cap.isOpened():
         elif key == ord('c'):
             selected_id  = None
             lost_counter = 0
-            pos_history.clear()
             speed_history.clear()
             current_speed_mph = 0.0
         else:
