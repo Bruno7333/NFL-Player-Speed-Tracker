@@ -24,9 +24,9 @@ MINIMAP_ORIGIN = (10, 10)
 # Constants — field geometry
 # ─────────────────────────────────────────────
 FIELD_WIDTH    = 53.3    # yards — distance between the two sidelines
-VP_DEPTH_YARDS = 76.35   # How far away the camera is from the sideline
-                         # Close Sideline is roughly 50 yds
-                         # Far Sideline is roughly 103.3 yds
+VP_DEPTH_YARDS = 76.35   # How far away the vanishing point where all yard lines converge is from the sideline
+                         # Far Sideline is roughly 50 yds
+                         # Close Sideline is roughly 103.3 yds
                          # Currently chose 76.35 for roughly halfway down the field
                          # See if we can find a way to detect distance from sideline from video feed.
                          # Dont know how to do this yet, try to fix later. Estimate is good enough for now.
